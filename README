@@ -1,5 +1,39 @@
-prueba
-prueba
-prueba
-prueba
-prueba
+ksm-admin - KSM info and control utility
+Licensed under GPLv3, readable at: 
+
+USAGE
+               ksm-admin {start|stop|status [-f]|flush|millisecs m|scan p|help}
+
+DESCRIPTION
+               ksm-admin helps the system admin know about KSM usage in the system.
+
+               KSM uses sysfs files at /sys/kernel/mm/ksm with weird names. With ksm-admin, all info is condensed
+               and friendly readable.
+OPTIONS
+   start
+               start KSM by doing "echo 1 > /sys/kernel/mm/ksm/run"
+
+   stop
+               stop KSM by doing "echo 0 > /sys/kernel/mm/ksm/run" The 'stop' command doesn't clean cached pages.
+
+   status [-f]
+               Show KSM data and info. The '-f' option shows data in continous mode (similar to `top').
+
+   flush
+               stop KSM by doing "echo 2 > /sys/kernel/mm/ksm/run". The 'flush' command remove all cached data!
+
+   millisecs m
+               Set to 'm' millisecs the time between scans, doing "echo m > /sys/kernel/mm/ksm/sleep_millisecs".
+               A possitive integer is spected.
+
+   scan p
+               set how many 'p' pages to scan between each sleep, by doing "echo p > /sys/kernel/mm/ksm/pages_to_scan".
+               A possitive integer is spected.
+
+   help
+               Show help, version and usage.
+
+ABOUT
+               Resume messages are only orientative. KSM takes long time to start working well.
+               The RAM and SWAP usage are the system total RAM and SWAP usage (result of consulting `free' command).
+
