@@ -1,5 +1,5 @@
 ksm-admin - KSM info and control utility
-Licensed under GPLv3, readable at: 
+Licensed under GPLv3.
 
 USAGE
 	ksm-admin {start|stop|status [-f]|flush|millisecs m|scan p|help}

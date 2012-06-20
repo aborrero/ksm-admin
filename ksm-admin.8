@@ -1,0 +1,40 @@
+.TH KSM-ADMIN 8 "20 Jun 2012"
+.SH NAME
+ksm-admin \- KSM info and control utility
+.SH SYNOPSIS
+\fBksm-admin\fP {start|stop|status [-f]|flush|millisecs m|scan p|help}
+.SH DESCRIPTION
+\fBksm-admin\fP helps the system administrator know about KSM usage in the local machine.
+
+KSM uses sysfs files at /sys/kernel/mm/ksm with weird names. With ksm-admin, all info is condensed and friendly readable.
+.SH OPTIONS
+.TP
+\fBstart\fP
+start KSM by doing "echo 1 > /sys/kernel/mm/ksm/run"
+.TP
+\fBstop\fP
+stop KSM by doing "echo 0 > /sys/kernel/mm/ksm/run" The 'stop' command doesn't clean cached pages.
+.TP
+\fBstatus [-f]\fP
+Show KSM data and info. The '-f' option shows data in continous mode (similar to `\fBtop\fP').
+.TP
+\fBflush\fP
+stop KSM by doing "echo 2 > /sys/kernel/mm/ksm/run". The 'flush' command \fIremove all\fP cached data!
+.TP
+\fBmillisecs m\fP
+Set to 'm' millisecs the time between scans, doing "echo m > /sys/kernel/mm/ksm/sleep_millisecs". A possitive integer is spected.
+.TP
+\fBscan p\fP
+Set how many 'p' pages to scan between each sleep, by doing "echo p > /sys/kernel/mm/ksm/pages_to_scan". A possitive integer is spected.
+.TP
+\fBhelp\fP
+Show help, version and usage.
+.SH ABOUT
+Resume messages are only orientative. KSM takes long time to start working well (to start being efficient).
+
+The RAM and SWAP usage are the system total RAM and SWAP usage (result of consulting `\fBfree\fP' command).
+.SH BUGS, COMMENTS AND OTHERS
+Please, contact at \fI<aborrero@cica.es>\fP or \fI<arturo.borrero.glez@gmail.com>\fP.
+
+See the code at: \fIhttps://github.com/aborrero/ksm-admin\fP
+
