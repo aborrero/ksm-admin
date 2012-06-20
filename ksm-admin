@@ -24,7 +24,7 @@
 # Declarations
 
 THIS="/usr/sbin/ksm-admin"
-VERSION="0.1-6"
+VERSION="0.2"
 
 # Change this for using in different OS.
 UNAME="/bin/uname"
@@ -49,8 +49,6 @@ KSM_PAGES_TO_SCAN="$KSM_PATH/pages_to_scan"
 KSM_VOLATILE="$KSM_PATH/pages_volatile"
 
 # Color codes
-C_RED="\E[31m"
-C_YELLOWBOLD="\E[1;33m"
 C_NORMAL="\E[0m"
 C_BOLD="\E[1m"
 
@@ -62,13 +60,13 @@ required_bins()
 	local required_bins_retval=0
 
 	# Test all binary needed by this script. This is because from one OS to other, some PATH may vary.
-	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${UNAME}] binary has not execution permission or was not found." ; }
-	[ ! -x $CAT ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${CAT}] binary has not execution permission or was not found." ; }
-	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${WATCH}] binary has not execution permission or was not found." ; }
-	[ ! -x $BASH ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${BASH}] binary has not execution permission or was not found." ; }
-	[ ! -x $GREP ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${GREP}] binary has not execution permission or was not found." ; }
-	[ ! -x $AWK ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${AWK}] binary has not execution permission or was not found." ; }
-	[ ! -x $FREE ] && { required_bins_retval=1 ; echo -e "${C_RED}ERROR${C_NORMAL}: The [${FREE}] binary has not execution permission or was not found." ; }
+	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo -e "E: The [${UNAME}] binary has not execution permission or was not found." ; }
+	[ ! -x $CAT ] && { required_bins_retval=1 ; echo -e "E: The [${CAT}] binary has not execution permission or was not found." ; }
+	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo -e "E: The [${WATCH}] binary has not execution permission or was not found." ; }
+	[ ! -x $BASH ] && { required_bins_retval=1 ; echo -e "E: The [${BASH}] binary has not execution permission or was not found." ; }
+	[ ! -x $GREP ] && { required_bins_retval=1 ; echo -e "E: The [${GREP}] binary has not execution permission or was not found." ; }
+	[ ! -x $AWK ] && { required_bins_retval=1 ; echo -e "E: The [${AWK}] binary has not execution permission or was not found." ; }
+	[ ! -x $FREE ] && { required_bins_retval=1 ; echo -e "E: The [${FREE}] binary has not execution permission or was not found." ; }
 
 	return $required_bins_retval
 }
@@ -103,12 +101,12 @@ is_ksm_efective()
 {
 	# As seen in some documentation  Q(-_-Q)
 	local retval=0
-	if [ "`$CAT $KSM_PAGES_SHARING`" -gt "`$CAT $KSM_PAGES_SHARED`" ] || [ "`$CAT $KSM_PAGES_SHARING`" -eq "`$CAT $KSM_PAGES_SHARED`" ] 2> /dev/null
+	if [ "`$CAT $KSM_PAGES_SHARING`" -gt "`$CAT $KSM_PAGES_SHARED`" ] 2> /dev/null || [ "`$CAT $KSM_PAGES_SHARING`" -eq "`$CAT $KSM_PAGES_SHARED`" ] 2> /dev/null
 	then
 		# yes, is effective.
 		retval=1
 	fi
-	if [ "`$CAT $KSM_PAGES_UNSHARED`" -gt "`$CAT $KSM_PAGES_SHARING`" ] || [ "`$CAT $KSM_PAGES_UNSHARED`" -eq "`$CAT $KSM_PAGES_SHARING`" ] 2> /dev/null
+	if [ "`$CAT $KSM_PAGES_UNSHARED`" -gt "`$CAT $KSM_PAGES_SHARING`" ] 2> /dev/null || [ "`$CAT $KSM_PAGES_UNSHARED`" -eq "`$CAT $KSM_PAGES_SHARING`" ] 2> /dev/null
 	then
 		# those parameters indicates that is not effective, despite previous check.
 		retval=0
@@ -148,16 +146,16 @@ status()
 	then
 		echo -e "${C_BOLD}yes${C_NORMAL}"
 	else
-		echo -e "${C_RED}no${C_NORMAL}"
+		echo -e "${C_BOLD}no${C_NORMAL}"
 	fi
-	echo "- Pages shared: `$CAT $KSM_PAGES_SHARED 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Pages sharing: `$CAT $KSM_PAGES_SHARING 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Pages unshared: `$CAT $KSM_PAGES_UNSHARED 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Full scans: `$CAT $KSM_FULL_SCANS 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Sleep millisecs: `$CAT $KSM_SLEEP 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
-	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo -e ${C_RED}No data found!${C_NORMAL}`"
+	echo "- Pages shared: `$CAT $KSM_PAGES_SHARED 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Pages sharing: `$CAT $KSM_PAGES_SHARING 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Pages unshared: `$CAT $KSM_PAGES_UNSHARED 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Full scans: `$CAT $KSM_FULL_SCANS 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Sleep millisecs: `$CAT $KSM_SLEEP 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
 	echo "Resume:"
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
@@ -189,7 +187,7 @@ status()
 stop()
 {
 	echo 0 > $KSM_RUN
-	return 0
+	return $?
 }
 start()
 {
@@ -206,18 +204,24 @@ start()
 flush()
 {
 	echo 2 > $KSM_RUN
-	return 0
+	return $?
 }
 millisecs()
 {
 	local retval=0
 
-	if [ $1 -ge 0 ] 2> /dev/null
+	# Validating parameter
+	local flag_invalid_parameter=0
+	[ -z $1 ] && flag_invalid_parameter=1
+	egrep ^[[:digit:]]+$ <<< $1 > /dev/null 2> /dev/null || flag_invalid_parameter=1
+	[ $1 -ge 0 ] && flag_invalid_parameter=1
+
+	if [ $flag_invalid_parameter -eq 0 ] 2> /dev/null
 	then
 		echo $1 > $KSM_SLEEP
 		retval=$?
 	else
-		echo -e "${C_RED}ERROR${C_NORMAL}: millisecs, invalid value. An integer >= 0 is needed."
+		echo -e "E: millisecs, invalid value. An integer >= 0 is needed."
 		retval=1
 	fi
 
@@ -227,12 +231,18 @@ scan()
 {
 	local retval=0
 
-	if [ $1 -ge 0 ] 2> /dev/null
+	# Validating parameter
+	local flag_invalid_parameter=0
+	[ -z $1 ] && flag_invalid_parameter=1
+	egrep ^[[:digit:]]+$ <<< $1 > /dev/null 2> /dev/null || flag_invalid_parameter=1
+	[ $1 -ge 0 ] && flag_invalid_parameter=1
+
+	if [ $flag_invalid_parameter -eq 0 ] 2> /dev/null
 	then
 		echo $1 > $KSM_PAGES_TO_SCAN
 		retval=$?
 	else
-		echo -e "${C_RED}ERROR${C_NORMAL}: scan, invalid value. An integer >= 0 is needed."
+		echo -e "E: scan, invalid value. An integer >= 0 is needed."
 		retval=1
 	fi
 
@@ -281,13 +291,13 @@ required_bins || exit $?
 files_exist
 if [ $? -eq 0 ]
 then
-	echo -e "${C_YELLOWBOLD}WARNING${C_NORMAL}: Some KSM file missing at ${C_BOLD}$KSM_PATH${C_NORMAL}."
+	echo -e "W: Some KSM file missing at ${C_BOLD}$KSM_PATH${C_NORMAL}."
 fi
 
 has_support
 if [ $? -eq 0 ]
 then
-	echo -e "${C_RED}ERROR${C_NORMAL}: This machine has no KSM support."
+	echo -e "E: This machine has no KSM support."
 	exit 1
 fi
 
