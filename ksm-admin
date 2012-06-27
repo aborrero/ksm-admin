@@ -74,10 +74,12 @@ required_bins()
 files_exist()
 {
 	local retval=0
-	if [ -d $KSM_PATH ] && [ -r $KSM_RUN ] && [ -r $KSM_PAGES_SHARING ] && [ -r $KSM_PAGES_UNSHARED ] && [ -r $KSM_PAGES_UNSHARED ] && [ -r $KSM_FULL_SCANS ] && [ -r $KSM_SLEEP ] && [ -r $KSM_MAX_KERNEL_PAGES ] && [ -r $KSM_PAGES_TO_SCAN ] && [ -r $KSM_VOLATILE ]
-	then
-		retval=1
-	fi
+	[ -d $KSM_PATH ] && [ -r $KSM_RUN ] \
+	&& [ -r $KSM_PAGES_SHARING ] && [ -r $KSM_PAGES_UNSHARED ] \
+	&& [ -r $KSM_PAGES_UNSHARED ] && [ -r $KSM_FULL_SCANS ] \
+	&& [ -r $KSM_SLEEP ] && [ -r $KSM_MAX_KERNEL_PAGES ] \
+	&& [ -r $KSM_PAGES_TO_SCAN ] && [ -r $KSM_VOLATILE ] && retval=1
+
 	return $retval
 }
 
@@ -210,13 +212,8 @@ millisecs()
 {
 	local retval=0
 
-	# Validating parameter
-	local flag_invalid_parameter=0
-	[ -z $1 ] && flag_invalid_parameter=1
-	egrep ^[[:digit:]]+$ <<< $1 > /dev/null 2> /dev/null || flag_invalid_parameter=1
-	[ $1 -ge 0 ] && flag_invalid_parameter=1
-
-	if [ $flag_invalid_parameter -eq 0 ] 2> /dev/null
+	# Validating parameter: a possitive integer
+	if [[ $1 =~ ^[0-9]*$ ]] 2> /dev/null
 	then
 		echo $1 > $KSM_SLEEP
 		retval=$?
@@ -231,13 +228,8 @@ scan()
 {
 	local retval=0
 
-	# Validating parameter
-	local flag_invalid_parameter=0
-	[ -z $1 ] && flag_invalid_parameter=1
-	egrep ^[[:digit:]]+$ <<< $1 > /dev/null 2> /dev/null || flag_invalid_parameter=1
-	[ $1 -ge 0 ] && flag_invalid_parameter=1
-
-	if [ $flag_invalid_parameter -eq 0 ] 2> /dev/null
+	# Validating parameter: a possitive integer
+	if [[ $1 =~ ^[0-9]*$ ]] 2> /dev/null
 	then
 		echo $1 > $KSM_PAGES_TO_SCAN
 		retval=$?
