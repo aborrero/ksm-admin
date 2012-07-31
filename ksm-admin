@@ -21,7 +21,7 @@
 # Also Proxmox and RedHat's virtualization documentation.
 
 ################################################################
-# Declarations
+# Variable declarations
 
 THIS="/usr/sbin/ksm-admin"
 VERSION="0.2"
@@ -54,36 +54,47 @@ C_BOLD="\E[1m"
 
 
 ################################################################
-# Functions
-required_bins()
+# Functions declarations
+
+# int required_bins()
+# used to check all binaries
+function required_bins()
 {
 	local required_bins_retval=0
 
 	# Test all binary needed by this script. This is because from one OS to other, some PATH may vary.
-	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo -e "E: The [${UNAME}] binary has not execution permission or was not found." ; }
-	[ ! -x $CAT ] && { required_bins_retval=1 ; echo -e "E: The [${CAT}] binary has not execution permission or was not found." ; }
-	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo -e "E: The [${WATCH}] binary has not execution permission or was not found." ; }
-	[ ! -x $BASH ] && { required_bins_retval=1 ; echo -e "E: The [${BASH}] binary has not execution permission or was not found." ; }
-	[ ! -x $GREP ] && { required_bins_retval=1 ; echo -e "E: The [${GREP}] binary has not execution permission or was not found." ; }
-	[ ! -x $AWK ] && { required_bins_retval=1 ; echo -e "E: The [${AWK}] binary has not execution permission or was not found." ; }
-	[ ! -x $FREE ] && { required_bins_retval=1 ; echo -e "E: The [${FREE}] binary has not execution permission or was not found." ; }
+	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo "E: The [${UNAME}] binary has not execution permission or was not found." ; }
+	[ ! -x $CAT ] && { required_bins_retval=1 ; echo "E: The [${CAT}] binary has not execution permission or was not found." ; }
+	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo "E: The [${WATCH}] binary has not execution permission or was not found." ; }
+	[ ! -x $BASH ] && { required_bins_retval=1 ; echo "E: The [${BASH}] binary has not execution permission or was not found." ; }
+	[ ! -x $GREP ] && { required_bins_retval=1 ; echo "E: The [${GREP}] binary has not execution permission or was not found." ; }
+	[ ! -x $AWK ] && { required_bins_retval=1 ; echo "E: The [${AWK}] binary has not execution permission or was not found." ; }
+	[ ! -x $FREE ] && { required_bins_retval=1 ; echo "E: The [${FREE}] binary has not execution permission or was not found." ; }
 
 	return $required_bins_retval
 }
 
-files_exist()
+# int files_exist()
+# used to know if any KSM related file is missing
+function files_exist()
 {
 	local retval=0
-	[ -d $KSM_PATH ] && [ -r $KSM_RUN ] \
-	&& [ -r $KSM_PAGES_SHARING ] && [ -r $KSM_PAGES_UNSHARED ] \
-	&& [ -r $KSM_PAGES_UNSHARED ] && [ -r $KSM_FULL_SCANS ] \
-	&& [ -r $KSM_SLEEP ] && [ -r $KSM_MAX_KERNEL_PAGES ] \
-	&& [ -r $KSM_PAGES_TO_SCAN ] && [ -r $KSM_VOLATILE ] && retval=1
+	[ ! -d $KSM_PATH ] && { retval=1 ; echo  "E: Directory $KSM_PATH not found." ; }
+	[ ! -r $KSM_RUN ] && { retval=1 ; echo "W: File $KSM_RUN not found." ; }
+	[ ! -r $KSM_PAGES_SHARING ] && { retval=1 ; echo "W: File $KSM_PAGES_SHARING not found." ; }
+	[ ! -r $KSM_PAGES_UNSHARED ] && { retval=1 ; echo "W: File $KSM_PAGES_UNSHARED not found." ; }
+	[ ! -r $KSM_FULL_SCANS ] && { retval=1 ; echo "W: File $KSM_FULL_SCANS not found." ; }
+	[ ! -r $KSM_SLEEP ] && { retval=1 ; echo "W: File $KSM_SLEEP not found." ; }
+	[ ! -r $KSM_MAX_KERNEL_PAGES ] && { retval=1 ; echo "W: File $KSM_MAX_KERNEL_PAGES not found." ; }
+	[ ! -r $KSM_PAGES_TO_SCAN ] && { retval=1 ; echo "W: File $KSM_PAGES_TO_SCAN not found." ; }
+	[ ! -r $KSM_VOLATILE ] && { retval=1 ; echo "W: File $KSM_VOLATILE not found." ; }
 
 	return $retval
 }
 
-has_support()
+# int has_support()
+# used to know if this kernel has KSM support
+function has_support()
 {
 	local retval=0
 	$GREP "CONFIG_KSM=y" /boot/config-`$UNAME -r` 2> /dev/null > /dev/null
@@ -94,12 +105,18 @@ has_support()
 
 	return $retval
 }
-is_running()
+
+# int is_running()
+# used to know the state of KSM
+function is_running()
 {
-	local retval=`$CAT $KSM_RUN`
-	return $retval
+	[ ! -r $KSM_RUN ] && return 1
+	return `$CAT $KSM_RUN`
 }
-is_ksm_efective()
+
+# int is_ksm_effective()
+# used to know if ksm if being effective
+function is_ksm_efective()
 {
 	# As seen in some documentation  Q(-_-Q)
 	local retval=0
@@ -115,7 +132,10 @@ is_ksm_efective()
 	fi
 	return $retval
 }
-ram_usage()
+
+# int ram_usage()
+# caculate the ram usage percentage of the system
+function ram_usage()
 {
 	local retval=0
 	local total_ram=`$FREE -m | $GREP -i "Mem:" | $AWK -F' ' '{print $2}'`
@@ -126,7 +146,10 @@ ram_usage()
 	fi
 	return $retval
 }
-swap_usage()
+
+# int swap_usage()
+# calculate the swap usage percentage of the system
+function swap_usage()
 {
 	local retval=0
 	local total_swap=`$FREE -m | $GREP -i "Swap:" | $AWK -F' ' '{print $2}'`
@@ -137,7 +160,10 @@ swap_usage()
 	fi
 	return $retval
 }
-status()
+
+# void status()
+# print the status of KSM
+function status()
 {
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
 	echo -e "KSM status ${C_BOLD}|${C_NORMAL} `date`"
@@ -150,14 +176,14 @@ status()
 	else
 		echo -e "${C_BOLD}no${C_NORMAL}"
 	fi
-	echo "- Pages shared: `$CAT $KSM_PAGES_SHARED 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Pages sharing: `$CAT $KSM_PAGES_SHARING 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Pages unshared: `$CAT $KSM_PAGES_UNSHARED 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Full scans: `$CAT $KSM_FULL_SCANS 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Sleep millisecs: `$CAT $KSM_SLEEP 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
-	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo -e ${C_BOLD}No data found!${C_NORMAL}`"
+	echo "- Pages shared: `$CAT $KSM_PAGES_SHARED 2> /dev/null || echo no data`"
+	echo "- Pages sharing: `$CAT $KSM_PAGES_SHARING 2> /dev/null || echo no data`"
+	echo "- Pages unshared: `$CAT $KSM_PAGES_UNSHARED 2> /dev/null || echo no data`"
+	echo "- Full scans: `$CAT $KSM_FULL_SCANS 2> /dev/null || echo no data`"
+	echo "- Sleep millisecs: `$CAT $KSM_SLEEP 2> /dev/null || echo no data`"
+	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo no data`"
+	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo no data`"
+	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo no data`"
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
 	echo "Resume:"
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
@@ -185,13 +211,21 @@ status()
 	echo "- System RAM usage: ${?}%"
 	swap_usage
 	echo "- System SWAP usage: ${?}%"
+
+	return 0
 }
-stop()
+
+# int stop()
+# stops KSM
+function stop()
 {
 	echo 0 > $KSM_RUN
 	return $?
 }
-start()
+
+# int start()
+# starts KSM
+function start()
 {
 	local retval=1
 	echo 1 > $KSM_RUN
@@ -203,12 +237,18 @@ start()
 	fi
 	return $retval
 }
-flush()
+
+# int flush()
+# flush KSM
+function flush()
 {
 	echo 2 > $KSM_RUN
 	return $?
 }
-millisecs()
+
+# int millisecs(int millisecs)
+# set the millisecs parameter to KSM
+function millisecs()
 {
 	local retval=0
 
@@ -224,7 +264,10 @@ millisecs()
 
 	return $retval
 }
-scan()
+
+# int scan(int scan)
+# set the scan parameter to KSM
+function scan()
 {
 	local retval=0
 
@@ -240,12 +283,23 @@ scan()
 
 	return $retval
 }
-use()
+
+function memory_savage()
+{
+	return 0
+}
+
+# void use()
+# print usage information
+function use()
 {
 	echo "Usage: ksm-admin {start|stop|status {[-f]|[-s]}|flush|millisecs m|scan p|help}"
-
+	return 0
 }
-help()
+
+# void help()
+# print help information
+function help()
 {
 	use
 	echo "Version: $VERSION"
