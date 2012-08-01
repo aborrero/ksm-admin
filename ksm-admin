@@ -24,7 +24,7 @@
 # Variable declarations
 
 THIS="/usr/sbin/ksm-admin"
-VERSION="0.2"
+VERSION="0.3"
 
 # Change this for using in different OS.
 UNAME="/bin/uname"
@@ -34,7 +34,8 @@ BASH="/bin/bash"
 GREP="/bin/grep"
 AWK="/usr/bin/awk"
 FREE="/usr/bin/free"
-
+GETCONF="/usr/bin/getconf"
+PS="/bin/ps"
 
 # Change this if KSM implementation also changes
 KSM_PATH="/sys/kernel/mm/ksm"
@@ -63,13 +64,14 @@ function required_bins()
 	local required_bins_retval=0
 
 	# Test all binary needed by this script. This is because from one OS to other, some PATH may vary.
-	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo "E: The [${UNAME}] binary has not execution permission or was not found." ; }
-	[ ! -x $CAT ] && { required_bins_retval=1 ; echo "E: The [${CAT}] binary has not execution permission or was not found." ; }
-	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo "E: The [${WATCH}] binary has not execution permission or was not found." ; }
-	[ ! -x $BASH ] && { required_bins_retval=1 ; echo "E: The [${BASH}] binary has not execution permission or was not found." ; }
-	[ ! -x $GREP ] && { required_bins_retval=1 ; echo "E: The [${GREP}] binary has not execution permission or was not found." ; }
-	[ ! -x $AWK ] && { required_bins_retval=1 ; echo "E: The [${AWK}] binary has not execution permission or was not found." ; }
-	[ ! -x $FREE ] && { required_bins_retval=1 ; echo "E: The [${FREE}] binary has not execution permission or was not found." ; }
+	[ ! -x $UNAME ] && { required_bins_retval=1 ; echo "E: The [${UNAME}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $CAT ] && { required_bins_retval=1 ; echo "E: The [${CAT}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $WATCH ] && { required_bins_retval=1 ; echo "E: The [${WATCH}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $BASH ] && { required_bins_retval=1 ; echo "E: The [${BASH}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $GREP ] && { required_bins_retval=1 ; echo "E: The [${GREP}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $AWK ] && { required_bins_retval=1 ; echo "E: The [${AWK}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $FREE ] && { required_bins_retval=1 ; echo "E: The [${FREE}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $PS ] && { required_bins_retval=1 ; echo "E: The [${PS}] binary has not execution permission or was not found." >&2 ; }
 
 	return $required_bins_retval
 }
@@ -79,15 +81,15 @@ function required_bins()
 function files_exist()
 {
 	local retval=0
-	[ ! -d $KSM_PATH ] && { retval=1 ; echo  "E: Directory $KSM_PATH not found." ; }
-	[ ! -r $KSM_RUN ] && { retval=1 ; echo "W: File $KSM_RUN not found." ; }
-	[ ! -r $KSM_PAGES_SHARING ] && { retval=1 ; echo "W: File $KSM_PAGES_SHARING not found." ; }
-	[ ! -r $KSM_PAGES_UNSHARED ] && { retval=1 ; echo "W: File $KSM_PAGES_UNSHARED not found." ; }
-	[ ! -r $KSM_FULL_SCANS ] && { retval=1 ; echo "W: File $KSM_FULL_SCANS not found." ; }
-	[ ! -r $KSM_SLEEP ] && { retval=1 ; echo "W: File $KSM_SLEEP not found." ; }
-	[ ! -r $KSM_MAX_KERNEL_PAGES ] && { retval=1 ; echo "W: File $KSM_MAX_KERNEL_PAGES not found." ; }
-	[ ! -r $KSM_PAGES_TO_SCAN ] && { retval=1 ; echo "W: File $KSM_PAGES_TO_SCAN not found." ; }
-	[ ! -r $KSM_VOLATILE ] && { retval=1 ; echo "W: File $KSM_VOLATILE not found." ; }
+	[ ! -d $KSM_PATH ] && { retval=1 ; echo  "E: Directory $KSM_PATH not found." >&2 ; }
+	[ ! -r $KSM_RUN ] && { retval=1 ; echo "W: File $KSM_RUN not found." >&2 ; }
+	[ ! -r $KSM_PAGES_SHARING ] && { retval=1 ; echo "W: File $KSM_PAGES_SHARING not found." >&2 ; }
+	[ ! -r $KSM_PAGES_UNSHARED ] && { retval=1 ; echo "W: File $KSM_PAGES_UNSHARED not found." >&2 ; }
+	[ ! -r $KSM_FULL_SCANS ] && { retval=1 ; echo "W: File $KSM_FULL_SCANS not found." >&2 ; }
+	[ ! -r $KSM_SLEEP ] && { retval=1 ; echo "W: File $KSM_SLEEP not found." >&2 ; }
+	[ ! -r $KSM_MAX_KERNEL_PAGES ] && { retval=1 ; echo "W: File $KSM_MAX_KERNEL_PAGES not found." >&2 ; }
+	[ ! -r $KSM_PAGES_TO_SCAN ] && { retval=1 ; echo "W: File $KSM_PAGES_TO_SCAN not found." >&2 ; }
+	[ ! -r $KSM_VOLATILE ] && { retval=1 ; echo "W: File $KSM_VOLATILE not found." >&2 ; }
 
 	return $retval
 }
@@ -96,11 +98,11 @@ function files_exist()
 # used to know if this kernel has KSM support
 function has_support()
 {
-	local retval=0
+	local retval=1
 	$GREP "CONFIG_KSM=y" /boot/config-`$UNAME -r` 2> /dev/null > /dev/null
 	if [ $? -eq 0 ]
 	then
-		retval=1
+		retval=0
 	fi
 
 	return $retval
@@ -133,32 +135,53 @@ function is_ksm_efective()
 	return $retval
 }
 
+# int get_ksm_cpu_usage()
+# used to calculate the actual ksmd cpu usage
+function get_ksm_cpu_usage()
+{
+	# I obtain it from ps
+	local usage=`$PS aux 2>/dev/null | grep "\[ksmd\]" 2>/dev/null | awk -F' ' '{print $3}' 2>/dev/null`
+	if [ ! -z "$usage" ] && [[ $usage =~ ^[0-9]+"."?([0-9]+)?$ ]]
+	then
+		echo "$usage" # return if valid data
+	else
+		echo "no data" # return this otherwise
+	fi
+	return 0
+}
+
 # int ram_usage()
 # caculate the ram usage percentage of the system
 function ram_usage()
 {
-	local retval=0
-	local total_ram=`$FREE -m | $GREP -i "Mem:" | $AWK -F' ' '{print $2}'`
-	local used_ram=`$FREE -m | $GREP -i "Mem:" | $AWK -F' ' '{print $3}'`
-	if [ $total_ram -ne 0 ]
+	local total_ram=`$FREE | $GREP -i "Mem:" | $AWK -F' ' '{print $2}'`
+	local used_ram=`$FREE | $GREP -i "Mem:" | $AWK -F' ' '{print $3}'`
+	if [ $total_ram -ne 0 ] && [[ $total_ram =~ ^[0-9]+$ ]] && [[ $used_ram =~ ^[0-9]+$ ]]
 	then
-		retval=`echo -- | $AWK "{print $used_ram / $total_ram * 100}" | $AWK -F'.' '{print $1}'`
+		# the real return
+		echo -- | $AWK "{print $used_ram / $total_ram * 100}"
+	else
+		# the real return
+		echo "no data"
 	fi
-	return $retval
+	return 0
 }
 
 # int swap_usage()
 # calculate the swap usage percentage of the system
 function swap_usage()
 {
-	local retval=0
-	local total_swap=`$FREE -m | $GREP -i "Swap:" | $AWK -F' ' '{print $2}'`
-	local used_swap=`$FREE -m | $GREP -i "Swap:" | $AWK -F' ' '{print $3}'`
-	if [ $total_swap -ne 0 ]
+	local total_swap=`$FREE | $GREP -i "Swap:" | $AWK -F' ' '{print $2}'`
+	local used_swap=`$FREE | $GREP -i "Swap:" | $AWK -F' ' '{print $3}'`
+	if [ $total_swap -ne 0 ] && [[ $total_swap =~ ^[0-9]+$ ]] && [[ $used_swap =~ ^[0-9]+$ ]]
 	then
-		retval=`echo -- | $AWK "{print $used_swap / $total_swap * 100}" | $AWK -F'.' '{print $1}'`
+		# the real return
+		echo -- | $AWK "{print $used_swap / $total_swap * 100}"
+	else
+		# the real return
+		echo "no data"
 	fi
-	return $retval
+	return 0
 }
 
 # void status()
@@ -176,6 +199,9 @@ function status()
 	else
 		echo -e "${C_BOLD}no${C_NORMAL}"
 	fi
+	# I'm working on this:
+	# echo -n "- KSM actual CPU usage [%]: "
+	# get_ksm_cpu_usage
 	echo "- Pages shared: `$CAT $KSM_PAGES_SHARED 2> /dev/null || echo no data`"
 	echo "- Pages sharing: `$CAT $KSM_PAGES_SHARING 2> /dev/null || echo no data`"
 	echo "- Pages unshared: `$CAT $KSM_PAGES_UNSHARED 2> /dev/null || echo no data`"
@@ -184,6 +210,8 @@ function status()
 	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo no data`"
 	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo no data`"
 	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo no data`"
+	echo -n "- Kernel page size: "
+	print_data `$GETCONF PAGESIZE 2>/dev/null`
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
 	echo "Resume:"
 	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
@@ -207,10 +235,13 @@ function status()
 			echo "- No data about KSM usefullness. Not running."
 		fi
 	fi
+	echo -n "- Saving memory: "
+	local saving_mem=$( saving_memory )
+	print_data $saving_mem
+	echo -n "- System RAM usage [%]: "
 	ram_usage
-	echo "- System RAM usage: ${?}%"
+	echo -n "- System SWAP usage [%]: "
 	swap_usage
-	echo "- System SWAP usage: ${?}%"
 
 	return 0
 }
@@ -219,6 +250,7 @@ function status()
 # stops KSM
 function stop()
 {
+	[ ! -w $KSM_RUN ] && { echo "E: No write permission in $KSM_RUN." >&2 ; return 1 ; }
 	echo 0 > $KSM_RUN
 	return $?
 }
@@ -228,6 +260,9 @@ function stop()
 function start()
 {
 	local retval=1
+
+	[ ! -w $KSM_RUN ] && { echo "E: No write permission in $KSM_RUN." >&2 ; return 1 ; }
+
 	echo 1 > $KSM_RUN
 
 	is_running
@@ -242,6 +277,7 @@ function start()
 # flush KSM
 function flush()
 {
+	[ ! -w $KSM_RUN ] && { echo "E: No write permission in $KSM_RUN." >&2 ; return 1 ; }
 	echo 2 > $KSM_RUN
 	return $?
 }
@@ -250,6 +286,7 @@ function flush()
 # set the millisecs parameter to KSM
 function millisecs()
 {
+	[ ! -w $KSM_SLEEP ] && { echo "E: No write permission in $KSM_SLEEP." >&2 ; return 1 ; }
 	local retval=0
 
 	# Validating parameter: a possitive integer
@@ -258,7 +295,7 @@ function millisecs()
 		echo $1 > $KSM_SLEEP
 		retval=$?
 	else
-		echo -e "E: millisecs, invalid value. An integer >= 0 is needed."
+		echo "E: millisecs, invalid value. An integer >= 0 is needed." >&2
 		retval=1
 	fi
 
@@ -269,6 +306,8 @@ function millisecs()
 # set the scan parameter to KSM
 function scan()
 {
+	[ ! -w $KSM_PAGES_TO_SCAN ] && { echo "E: No write permission to $KSM_PAGES_TO_SCAN." >&2 ; return 1 ; }
+
 	local retval=0
 
 	# Validating parameter: a possitive integer
@@ -277,17 +316,50 @@ function scan()
 		echo $1 > $KSM_PAGES_TO_SCAN
 		retval=$?
 	else
-		echo -e "E: scan, invalid value. An integer >= 0 is needed."
+		echo "E: scan, invalid value. An integer >= 0 is needed." >&2
 		retval=1
 	fi
 
 	return $retval
 }
 
-function memory_savage()
+# int saving_memory()
+# return the amount of saving memory due to KSM
+function saving_memory()
 {
-	return 0
+	local retval=0
+	local pagesize=`$GETCONF PAGESIZE 2>/dev/null || echo 0`
+	local pages_sharing=`$CAT $KSM_PAGES_SHARING 2>/dev/null || echo 0`
+	echo $(( pagesize * pages_sharing )) # this is the real return
+	return $retval
 }
+
+# void print_bytes_count(int bytecount)
+# Used to print bytes count in a human-readable way
+function print_bytes_count()
+{
+        local arg0=$1
+        [ $arg0 -ge 9663676416 ] && { echo "$(( arg0 / 1073741824 )) GB" ; return 0 ; }
+        [ $arg0 -ge 9437184 ] && { echo "$(( arg0 /  1048576 )) MB" ; return 0 ; }
+        [ $1 -ge 9216 ] && { echo "$(( arg0 /  1024 )) KB" ; return 0 ; }
+        echo "$arg0 B"
+
+        return 0
+}
+
+# void print_data(int[] data)
+# Used to validate and print data to user
+function print_data()
+{
+        if [ ! -z "$1" ] && [[ $1 =~ ^[0-9]+$ ]]
+        then
+                print_bytes_count $1
+        else
+                echo "no data"
+        fi
+        return 0
+}
+
 
 # void use()
 # print usage information
@@ -333,17 +405,10 @@ function help()
 # Program
 
 required_bins || exit $?
-
 files_exist
-if [ $? -eq 0 ]
+if ! has_support
 then
-	echo -e "W: Some KSM file missing at ${C_BOLD}$KSM_PATH${C_NORMAL}."
-fi
-
-has_support
-if [ $? -eq 0 ]
-then
-	echo -e "E: This machine has no KSM support."
+	echo "E: This machine has no KSM support." >&2
 	exit 1
 fi
 
@@ -355,6 +420,7 @@ case "$1" in
 				exit $?
 				;;
 			"-f" )
+				echo "W: Deprecation warning. The [-f] option will be removed in future versions." >&2
 				$WATCH -ct $BASH $THIS status
 				exit $?
 				;;
