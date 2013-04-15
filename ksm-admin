@@ -29,7 +29,7 @@
 
 
 ### Use:
-# ksm-admin {start|stop|status {[-f]|[-s]}|flush|millisecs m|scan p|help}
+# ksm-admin {start|stop|status [-s]|flush|millisecs m|scan p|help}
 ### Return codes:
 # Failure: 1
 # Success: 0
@@ -46,18 +46,19 @@
 # Variable declarations
 
 THIS="/usr/sbin/ksm-admin"
-VERSION="0.3"
+VERSION="0.4"
 
 # Change this for using in different OS.
-UNAME="/bin/uname"
-CAT="/bin/cat"
-WATCH="/usr/bin/watch"
-BASH="/bin/bash"
-GREP="/bin/grep"
-AWK="/usr/bin/awk"
-FREE="/usr/bin/free"
-GETCONF="/usr/bin/getconf"
-PS="/bin/ps"
+UNAME="$(which uname)"
+CAT="$(which cat)"
+WATCH="$(which watch)"
+BASH="$(which bash)"
+GREP="$(which grep)"
+AWK="$(which awk)"
+FREE="$(which free)"
+GETCONF="$(which getconf)"
+PS="$(which ps)"
+SYSCTL="$(which sysctl)"
 
 # Change this if KSM implementation also changes
 KSM_PATH="/sys/kernel/mm/ksm"
@@ -70,11 +71,6 @@ KSM_SLEEP="$KSM_PATH/sleep_millisecs"
 KSM_MAX_KERNEL_PAGES="$KSM_PATH/max_kernel_pages"
 KSM_PAGES_TO_SCAN="$KSM_PATH/pages_to_scan"
 KSM_VOLATILE="$KSM_PATH/pages_volatile"
-
-# Color codes
-C_NORMAL="\E[0m"
-C_BOLD="\E[1m"
-
 
 ################################################################
 # Functions declarations
@@ -94,6 +90,7 @@ function required_bins()
 	[ ! -x $AWK ] && { required_bins_retval=1 ; echo "E: The [${AWK}] binary has not execution permission or was not found." >&2 ; }
 	[ ! -x $FREE ] && { required_bins_retval=1 ; echo "E: The [${FREE}] binary has not execution permission or was not found." >&2 ; }
 	[ ! -x $PS ] && { required_bins_retval=1 ; echo "E: The [${PS}] binary has not execution permission or was not found." >&2 ; }
+	[ ! -x $SYSCTL ] && { required_bins_retval=1 ; echo "E: The [${SYSCTL}] binary has not execution permission or was not found." >&2 ; }
 
 	return $required_bins_retval
 }
@@ -136,6 +133,19 @@ function is_running()
 {
 	[ ! -r $KSM_RUN ] && return 1
 	return `$CAT $KSM_RUN`
+}
+
+# string get_vm_swappiness_value()
+# Get the vm.swappiness value from sysctl
+function get_vm_swappiness_value()
+{
+	local tmp=$( $SYSCTL vm.swappiness 2>/dev/null | $GREP "^vm.swappiness = [0-9]\+$" | awk -F'= ' '{print $2}' )
+
+	if [ -z "$tmp" ] ; then
+		echo "unknow"
+	else
+		echo "$tmp"
+	fi
 }
 
 # int is_ksm_effective()
@@ -210,16 +220,14 @@ function swap_usage()
 # print the status of KSM
 function status()
 {
-	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
-	echo -e "KSM status ${C_BOLD}|${C_NORMAL} `date`"
-	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
+	echo "### KSM status: $(date)"
 	echo -n "- Running: "
 	is_running
 	if [ $? -eq 1 ]
 	then
-		echo -e "${C_BOLD}yes${C_NORMAL}"
+		echo -e "yes"
 	else
-		echo -e "${C_BOLD}no${C_NORMAL}"
+		echo -e "no"
 	fi
 	# I'm working on this:
 	# echo -n "- KSM actual CPU usage [%]: "
@@ -232,11 +240,19 @@ function status()
 	echo "- Max kernel pages: `$CAT $KSM_MAX_KERNEL_PAGES 2> /dev/null || echo no data`"
 	echo "- Pages to scan: `$CAT $KSM_PAGES_TO_SCAN 2> /dev/null || echo no data`"
 	echo "- Pages volatile: `$CAT $KSM_VOLATILE 2> /dev/null || echo no data`"
+	echo ""
+	echo "### Additional data:"
+	echo "- Kernel vm.swappiness [0-100]: $(get_vm_swappiness_value)"
 	echo -n "- Kernel page size: "
 	print_data `$GETCONF PAGESIZE 2>/dev/null`
-	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
-	echo "Resume:"
-	echo -e "${C_BOLD}--------------------------------------------${C_NORMAL}"
+
+	echo -n "- Total system RAM usage [%]: "
+	ram_usage
+	echo -n "- Total system SWAP usage [%]: "
+	swap_usage
+	echo -n "- Saving memory due to KSM: "
+	local saving_mem=$( saving_memory )
+	print_data $saving_mem
 	is_ksm_efective
 	if [ $? -eq 1 ]
 	then
@@ -257,13 +273,6 @@ function status()
 			echo "- No data about KSM usefullness. Not running."
 		fi
 	fi
-	echo -n "- Saving memory: "
-	local saving_mem=$( saving_memory )
-	print_data $saving_mem
-	echo -n "- System RAM usage [%]: "
-	ram_usage
-	echo -n "- System SWAP usage [%]: "
-	swap_usage
 
 	return 0
 }
@@ -435,18 +444,12 @@ then
 fi
 
 case "$1" in
-	status )
-		case "$2" in
-			"" )
-				status
-				exit $?
-				;;
-			"-f" )
-				echo "W: Deprecation warning. The [-f] option will be removed in future versions." >&2
-				$WATCH -ct $BASH $THIS status
-				exit $?
-				;;
-			"-s" )
+	status|"" )
+		if [ -z "$2" ] ; then
+			status
+			exit $?
+		else
+			if [ "$2" == "-s" ] ; then
 				is_running
 				case $? in
 					0 )
@@ -459,11 +462,8 @@ case "$1" in
 						exit 0
 						;;
 				esac
-				;;
-			* )
-				exit 3
-				;;
-		esac
+			fi
+		fi
 		;;
 	start )
 		start
